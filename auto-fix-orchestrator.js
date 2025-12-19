@@ -1,48 +1,11 @@
 #!/usr/bin/env node
 import chalk from 'chalk';
-import dotenv from 'dotenv';
-import fs from 'fs';
+import { createConfig, validateConfig } from './config.js';
 import { GrafanaLogCollector } from './grafana-log-collector.js';
 import { StackTraceDecoder } from './trace-decoder-wrapper.js';
 import { ClaudeCodeClient } from './claude-code-client.js';
 import { ProcessedErrorsDB } from './processed-errors-db.js';
 import { SlackNotifier } from './slack-notifier.js';
-
-// 환경 변수 로드
-dotenv.config();
-
-/**
- * 설정 로드 (환경 변수 치환)
- */
-function loadConfig(configPath) {
-    const configFile = fs.readFileSync(configPath, 'utf8');
-
-    // 환경 변수 치환
-    const replaced = configFile.replace(/"\$\{(\w+)\}"/g, (match, key) => {
-        const value = process.env[key];
-        if (!value) return match;
-
-        // boolean 값 처리
-        if (value === 'true' || value === 'false') {
-            return value;
-        }
-
-        // 숫자 값 처리
-        if (!isNaN(value) && value.trim() !== '') {
-            return value;
-        }
-
-        // 문자열 값 처리 (이스케이프)
-        return '"' + value
-            .replace(/\\/g, '\\\\')
-            .replace(/"/g, '\\"')
-            .replace(/\n/g, '\\n')
-            .replace(/\r/g, '\\r')
-            .replace(/\t/g, '\\t') + '"';
-    });
-
-    return JSON.parse(replaced);
-}
 
 /**
  * Sleep 유틸리티

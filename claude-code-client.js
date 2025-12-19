@@ -80,6 +80,13 @@ export class ClaudeCodeClient {
             })
             .join('\n');
 
+        // 원본 스택 트레이스 포맷팅 (커밋 메시지용)
+        const stackTraceForCommit = error.stackTrace
+            .split('\n')
+            .slice(0, 3) // 처음 3줄만 사용
+            .map(line => `  ${line.trim()}`)
+            .join('\n');
+
         const prompt = `다음 프로덕션 에러를 수정해주세요:
 
 ## 에러 정보
@@ -104,6 +111,9 @@ ${contextLines}
 fix(auto): ${error.message.split('\n')[0].substring(0, 50)}
 
 ${error.type} 에러 수정 (${path.basename(original.file)}:${original.line})
+
+Stack Trace:
+${stackTraceForCommit}
 
 Fixes: ${errorInfo.hash}
 🤖 Generated with Claude Code

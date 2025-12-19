@@ -1,3 +1,8 @@
 node_modules
 workspace
 .env
+
+# Auto-fix 데이터 및 로그
+.auto-fix-data/
+logs/
+*.log

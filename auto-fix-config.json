@@ -62,8 +62,8 @@
     "username": "Auto-Fix Bot"
   },
   "paths": {
-    "processedErrorsDb": "./processed-errors-db.json",
-    "metricsFile": "./metrics.json",
-    "logFile": "./logs/auto-fix.log"
+    "processedErrorsDb": "./.auto-fix-data/processed-errors-db.json",
+    "metricsFile": "./.auto-fix-data/metrics.json",
+    "logFile": "./.auto-fix-data/logs/auto-fix.log"
   }
 }
