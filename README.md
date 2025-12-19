@@ -202,12 +202,20 @@ if (result.success) {
 scripts/stack-trace-decoder/
 ├── .env.example                  # 환경 변수 템플릿
 ├── .env                          # 환경 변수 (git ignored)
+├── .gitignore                    # Git 제외 파일 목록
 ├── auto-fix-config.json          # 설정 파일
 ├── decode-trace.js               # 인터랙티브 디코더
 ├── grafana-log-collector.js      # Grafana 로그 수집기
 ├── trace-decoder-wrapper.js      # 디코더 래퍼 (프로그래밍용)
 ├── claude-code-client.js         # Claude Code CLI 클라이언트
+├── auto-fix-orchestrator.js      # 메인 오케스트레이터
+├── slack-notifier.js             # Slack 알림 클라이언트
+├── processed-errors-db.js        # 처리된 에러 DB
 ├── integration-test.js           # 통합 테스트
+├── .auto-fix-data/               # 자동 생성 데이터 (git ignored)
+│   ├── processed-errors-db.json  # 처리된 에러 데이터베이스
+│   ├── metrics.json              # 메트릭 데이터
+│   └── logs/                     # 로그 파일
 ├── task.md                       # AI 자동화 구현 계획
 ├── package.json
 └── README.md
@@ -220,11 +228,14 @@ scripts/stack-trace-decoder/
 - ✅ Grafana 로그 수집기
 - ✅ 스택 트레이스 디코더 래퍼
 - ✅ Claude Code 통합
-- ✅ Git 자동 커밋
+- ✅ Git 자동 커밋 (스택 트레이스 포함)
+- ✅ 메인 오케스트레이터 (once/continuous 모드)
+- ✅ Slack 알림
+- ✅ 처리된 에러 DB
 
 구현 예정:
-- ⏳ 메인 오케스트레이터 (자동화 루프)
 - ⏳ 모니터링 대시보드
+- ⏳ 웹 UI
 
 자세한 구현 계획은 `task.md`를 참고하세요.
 
