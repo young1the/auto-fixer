@@ -14,6 +14,7 @@
     "test:decoder": "node trace-decoder-wrapper.js --json",
     "test:claude": "node claude-code-client.js",
     "test:integration": "node integration-test.js",
+    "test:slack": "node slack-notifier.js",
     "auto-fix": "node run-auto-fix.js",
     "auto-fix:once": "node auto-fix-orchestrator.js once",
     "auto-fix:loop": "node auto-fix-orchestrator.js continuous",
