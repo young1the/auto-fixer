@@ -9,7 +9,7 @@
     "maxResults": 100
   },
   "decoder": {
-    "sourceMapDir": "../../target/static/js",
+    "sourceMapDir": "${SOURCE_MAP_DIR}",
     "contextLines": 10,
     "ide": "intellij",
     "debug": true
@@ -53,8 +53,13 @@
   "features": {
     "dryRun": false,
     "manualApproval": false,
-    "enableSlackNotifications": false,
+    "enableSlackNotifications": "${ENABLE_SLACK_NOTIFICATIONS}",
     "saveMetrics": true
+  },
+  "slack": {
+    "webhookUrl": "${SLACK_WEBHOOK_URL}",
+    "channel": "#auto-fix-alerts",
+    "username": "Auto-Fix Bot"
   },
   "paths": {
     "processedErrorsDb": "./processed-errors-db.json",

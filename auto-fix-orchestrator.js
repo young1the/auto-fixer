@@ -6,6 +6,7 @@ import { GrafanaLogCollector } from './grafana-log-collector.js';
 import { StackTraceDecoder } from './trace-decoder-wrapper.js';
 import { ClaudeCodeClient } from './claude-code-client.js';
 import { ProcessedErrorsDB } from './processed-errors-db.js';
+import { SlackNotifier } from './slack-notifier.js';
 
 // 환경 변수 로드
 dotenv.config();
@@ -17,16 +18,27 @@ function loadConfig(configPath) {
     const configFile = fs.readFileSync(configPath, 'utf8');
 
     // 환경 변수 치환
-    const replaced = configFile.replace(/\$\{(\w+)\}/g, (match, key) => {
+    const replaced = configFile.replace(/"\$\{(\w+)\}"/g, (match, key) => {
         const value = process.env[key];
         if (!value) return match;
 
-        return value
+        // boolean 값 처리
+        if (value === 'true' || value === 'false') {
+            return value;
+        }
+
+        // 숫자 값 처리
+        if (!isNaN(value) && value.trim() !== '') {
+            return value;
+        }
+
+        // 문자열 값 처리 (이스케이프)
+        return '"' + value
             .replace(/\\/g, '\\\\')
             .replace(/"/g, '\\"')
             .replace(/\n/g, '\\n')
             .replace(/\r/g, '\\r')
-            .replace(/\t/g, '\\t');
+            .replace(/\t/g, '\\t') + '"';
     });
 
     return JSON.parse(replaced);
@@ -43,12 +55,14 @@ function sleep(ms) {
  * 메인 오케스트레이터
  */
 class AutoFixOrchestrator {
-    constructor(config) {
+    constructor(config, mode = 'once') {
         this.config = config;
+        this.mode = mode;
         this.collector = new GrafanaLogCollector(config);
         this.decoder = new StackTraceDecoder(config);
         this.claudeClient = new ClaudeCodeClient(config);
         this.db = new ProcessedErrorsDB(config.paths.processedErrorsDb);
+        this.slackNotifier = new SlackNotifier(config);
 
         this.stats = {
             totalRuns: 0,
@@ -114,6 +128,8 @@ class AutoFixOrchestrator {
      * 메인 루프 1회 실행
      */
     async runOnce() {
+        const processedErrors = [];
+
         try {
             this.stats.totalRuns++;
 
@@ -143,7 +159,8 @@ class AutoFixOrchestrator {
             console.log(chalk.green(`   ✓ ${newErrors.length}개의 새로운 에러 발견\n`));
 
             // 3. 에러 처리 (최대 개수 제한)
-            const maxFixes = this.config.limits.maxFixesPerRun;
+            // once 모드일 경우 1개만 처리
+            const maxFixes = this.mode === 'once' ? 1 : this.config.limits.maxFixesPerRun;
             const errorsToProcess = newErrors.slice(0, maxFixes);
 
             console.log(chalk.cyan(`3️⃣  에러 수정 시작 (최대 ${maxFixes}개)\n`));
@@ -153,7 +170,20 @@ class AutoFixOrchestrator {
 
                 console.log(chalk.yellow(`━━━ [${i + 1}/${errorsToProcess.length}] ━━━`));
 
-                await this.processError(error);
+                const result = await this.processError(error);
+
+                // 처리된 에러 정보 저장 (Slack 알림용)
+                if (result.success || result.reason) {
+                    const processedInfo = this.db.get(error.hash);
+                    if (processedInfo) {
+                        processedErrors.push({
+                            status: processedInfo.status,
+                            message: processedInfo.metadata?.message || error.error.message,
+                            file: processedInfo.metadata?.file || '',
+                            line: processedInfo.metadata?.line || '',
+                        });
+                    }
+                }
 
                 // 다음 에러 처리 전 대기
                 if (i < errorsToProcess.length - 1) {
@@ -166,9 +196,30 @@ class AutoFixOrchestrator {
             // 4. 통계 출력
             this.printStats();
 
+            // 5. Slack 알림 전송
+            await this.slackNotifier.sendNotification({
+                mode: this.mode,
+                fixed: this.stats.totalFixed,
+                failed: this.stats.totalFailed,
+                skipped: this.stats.totalSkipped,
+                total: errors.length,
+                errors: processedErrors,
+            });
+
         } catch (error) {
             console.error(chalk.red('\n❌ 오류 발생:'), error.message);
             console.error(error.stack);
+
+            // 오류 발생 시에도 Slack 알림 전송
+            await this.slackNotifier.sendNotification({
+                mode: this.mode,
+                fixed: this.stats.totalFixed,
+                failed: this.stats.totalFailed,
+                skipped: this.stats.totalSkipped,
+                total: this.stats.totalErrors,
+                errors: processedErrors,
+                error: error.message,
+            });
         }
     }
 
@@ -212,6 +263,7 @@ class AutoFixOrchestrator {
             console.log(chalk.dim(`   ${status}: ${count}개`));
         }
     }
+
 }
 
 /**
@@ -222,11 +274,11 @@ async function main() {
         // 설정 로드
         const config = loadConfig('./auto-fix-config.json');
 
-        // 오케스트레이터 생성
-        const orchestrator = new AutoFixOrchestrator(config);
-
         // 실행 모드 선택
         const mode = process.argv[2] || 'once';
+
+        // 오케스트레이터 생성
+        const orchestrator = new AutoFixOrchestrator(config, mode);
 
         switch (mode) {
             case 'once':

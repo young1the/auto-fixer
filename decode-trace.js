@@ -4,6 +4,10 @@ import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
 import chalk from 'chalk';
+import dotenv from 'dotenv';
+
+// 환경 변수 로드
+dotenv.config();
 
 // 설정 로드
 function loadConfig() {
@@ -16,7 +20,22 @@ function loadConfig() {
     };
 
     if (fs.existsSync(configPath)) {
-        return { ...defaultConfig, ...JSON.parse(fs.readFileSync(configPath, 'utf8')) };
+        const configFile = fs.readFileSync(configPath, 'utf8');
+
+        // 환경 변수 치환
+        const replaced = configFile.replace(/\$\{(\w+)\}/g, (match, key) => {
+            const value = process.env[key];
+            if (!value) return match;
+
+            return value
+                .replace(/\\/g, '\\\\')
+                .replace(/"/g, '\\"')
+                .replace(/\n/g, '\\n')
+                .replace(/\r/g, '\\r')
+                .replace(/\t/g, '\\t');
+        });
+
+        return { ...defaultConfig, ...JSON.parse(replaced) };
     }
 
     return defaultConfig;
