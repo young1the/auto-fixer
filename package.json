@@ -1,0 +1,33 @@
+{
+  "name": "stack-trace-decoder",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Decode minified stack traces using source maps and AI-powered auto-fix",
+  "bin": {
+    "decode-trace": "./decode-trace.js"
+  },
+  "scripts": {
+    "decode": "node decode-trace.js",
+    "collect-logs": "node grafana-log-collector.js",
+    "decode-wrapper": "node trace-decoder-wrapper.js",
+    "test:collector": "node grafana-log-collector.js --json",
+    "test:decoder": "node trace-decoder-wrapper.js --json",
+    "test:claude": "node claude-code-client.js",
+    "test:integration": "node integration-test.js",
+    "auto-fix": "node run-auto-fix.js",
+    "auto-fix:once": "node auto-fix-orchestrator.js once",
+    "auto-fix:loop": "node auto-fix-orchestrator.js continuous",
+    "db:stats": "node processed-errors-db.js stats",
+    "db:list": "node processed-errors-db.js list",
+    "db:cleanup": "node processed-errors-db.js cleanup",
+    "db:reset": "node processed-errors-db.js reset"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "source-map": "^0.7.4",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0"
+  }
+}

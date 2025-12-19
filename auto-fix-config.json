@@ -1,0 +1,64 @@
+{
+  "grafana": {
+    "url": "${GRAFANA_URL}",
+    "apiKey": "${GRAFANA_API_KEY}",
+    "datasourceUid": "${GRAFANA_DATASOURCE_UID}",
+    "queryInterval": 60000,
+    "lookbackWindow": "${GRAFANA_LOOKBACK_WINDOW}",
+    "logQuery": "${GRAFANA_LOG_QUERY}",
+    "maxResults": 100
+  },
+  "decoder": {
+    "sourceMapDir": "../../target/static/js",
+    "contextLines": 10,
+    "ide": "intellij",
+    "debug": true
+  },
+  "claudeCode": {
+    "cliPath": "${CLAUDE_CODE_PATH}",
+    "workingDir": "${WORKING_DIR}",
+    "timeout": 300000,
+    "maxRetries": 3
+  },
+  "git": {
+    "autoCommit": true,
+    "branch": "auto-fix/errors",
+    "createPR": false,
+    "commitPrefix": "fix(auto): ",
+    "pushToRemote": false
+  },
+  "limits": {
+    "maxFixesPerRun": 10,
+    "minIntervalBetweenFixes": 5000,
+    "maxRetries": 3,
+    "timeoutPerFix": 300000
+  },
+  "filters": {
+    "ignorePatterns": [
+      "node_modules/",
+      "vendor/",
+      "test/",
+      "**/*.test.js",
+      "**/*.spec.js"
+    ],
+    "minOccurrences": 1,
+    "timeWindow": "1h",
+    "errorTypes": [
+      "TypeError",
+      "ReferenceError",
+      "RangeError",
+      "SyntaxError"
+    ]
+  },
+  "features": {
+    "dryRun": false,
+    "manualApproval": false,
+    "enableSlackNotifications": false,
+    "saveMetrics": true
+  },
+  "paths": {
+    "processedErrorsDb": "./processed-errors-db.json",
+    "metricsFile": "./metrics.json",
+    "logFile": "./logs/auto-fix.log"
+  }
+}
