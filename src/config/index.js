@@ -1,12 +1,11 @@
-#!/usr/bin/env node
 import dotenv from 'dotenv';
+import path from 'path';
 
-// 환경 변수 로드
+// Load environment variables
 dotenv.config();
 
 /**
- * 설정 생성 함수
- * .env 파일에서 민감 정보를 불러오고 기본값과 병합합니다.
+ * Create the main auto-fixer configuration
  */
 export function createConfig() {
     return {
@@ -35,7 +34,7 @@ export function createConfig() {
         },
 
         git: {
-            autoCommit: process.env.GIT_AUTO_COMMIT !== 'false', // 기본값 true
+            autoCommit: process.env.GIT_AUTO_COMMIT !== 'false', // default true
             branch: process.env.GIT_BRANCH || 'auto-fix/errors',
             createPR: process.env.GIT_CREATE_PR === 'true' || false,
             commitPrefix: process.env.GIT_COMMIT_PREFIX || 'fix(auto): ',
@@ -75,7 +74,7 @@ export function createConfig() {
             dryRun: process.env.DRY_RUN === 'true' || false,
             manualApproval: process.env.MANUAL_APPROVAL === 'true' || false,
             enableSlackNotifications: process.env.ENABLE_SLACK_NOTIFICATIONS === 'true' || false,
-            saveMetrics: process.env.SAVE_METRICS !== 'false', // 기본값 true
+            saveMetrics: process.env.SAVE_METRICS !== 'false', // default true
         },
 
         slack: {
@@ -93,7 +92,7 @@ export function createConfig() {
 }
 
 /**
- * stack-trace-config 생성 함수
+ * Create the stack trace decoder specific configuration
  */
 export function createStackTraceConfig() {
     return {
@@ -106,12 +105,12 @@ export function createStackTraceConfig() {
 }
 
 /**
- * 설정 검증 함수
+ * Validate the configuration
  */
 export function validateConfig(config) {
     const errors = [];
 
-    // 필수 Grafana 설정 확인
+    // Check required Grafana config
     if (!config.grafana.url) {
         errors.push('GRAFANA_URL is required');
     }
@@ -122,7 +121,7 @@ export function validateConfig(config) {
         errors.push('GRAFANA_DATASOURCE_UID is required');
     }
 
-    // 필수 경로 설정 확인
+    // Check required paths
     if (!config.decoder.sourceMapDir) {
         errors.push('SOURCE_MAP_DIR is required');
     }
@@ -130,7 +129,7 @@ export function validateConfig(config) {
         errors.push('WORKING_DIR is required');
     }
 
-    // Slack 알림이 활성화된 경우 webhook URL 확인
+    // Check Slack config if enabled
     if (config.features.enableSlackNotifications && !config.slack.webhookUrl) {
         errors.push('SLACK_WEBHOOK_URL is required when Slack notifications are enabled');
     }
@@ -140,21 +139,4 @@ export function validateConfig(config) {
     }
 
     return true;
-}
-
-// CLI로 실행된 경우 설정 출력
-if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/')}`) {
-    const config = createConfig();
-    console.log('📋 Current Configuration:');
-    console.log(JSON.stringify(config, null, 2));
-
-    console.log('\n✅ Validating configuration...');
-    try {
-        validateConfig(config);
-        console.log('✅ Configuration is valid!');
-    } catch (error) {
-        console.error('❌ Configuration validation failed:');
-        console.error(error.message);
-        process.exit(1);
-    }
 }

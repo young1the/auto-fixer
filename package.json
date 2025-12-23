@@ -3,25 +3,29 @@
   "version": "1.0.0",
   "type": "module",
   "description": "Decode minified stack traces using source maps and AI-powered auto-fix",
+  "main": "src/index.js",
+  "files": [
+    "src"
+  ],
   "bin": {
-    "decode-trace": "./decode-trace.js"
+    "decode-trace": "./src/cli/decode-trace.js"
   },
   "scripts": {
-    "decode": "node decode-trace.js",
-    "collect-logs": "node grafana-log-collector.js",
-    "decode-wrapper": "node trace-decoder-wrapper.js",
-    "test:collector": "node grafana-log-collector.js --json",
-    "test:decoder": "node trace-decoder-wrapper.js --json",
-    "test:claude": "node claude-code-client.js",
-    "test:integration": "node integration-test.js",
-    "test:slack": "node slack-notifier.js",
-    "auto-fix": "node run-auto-fix.js",
-    "auto-fix:once": "node auto-fix-orchestrator.js once",
-    "auto-fix:loop": "node auto-fix-orchestrator.js continuous",
-    "db:stats": "node processed-errors-db.js stats",
-    "db:list": "node processed-errors-db.js list",
-    "db:cleanup": "node processed-errors-db.js cleanup",
-    "db:reset": "node processed-errors-db.js reset"
+    "decode": "node src/cli/decode-trace.js",
+    "collect-logs": "node src/core/grafana-log-collector.js",
+    "decode-wrapper": "node src/core/decoder-wrapper.js",
+    "test:collector": "node src/core/grafana-log-collector.js --json",
+    "test:decoder": "node src/core/decoder-wrapper.js --json",
+    "test:claude": "node src/core/claude-code-client.js",
+    "test:integration": "node tests/integration-test.js",
+    "test:slack": "node src/utils/slack-notifier.js",
+    "auto-fix": "node src/cli/run-auto-fix.js",
+    "auto-fix:once": "node src/core/auto-fix-orchestrator.js once",
+    "auto-fix:loop": "node src/core/auto-fix-orchestrator.js continuous",
+    "db:stats": "node src/db/processed-errors-db.js stats",
+    "db:list": "node src/db/processed-errors-db.js list",
+    "db:cleanup": "node src/db/processed-errors-db.js cleanup",
+    "db:reset": "node src/db/processed-errors-db.js reset"
   },
   "dependencies": {
     "chalk": "^5.3.0",

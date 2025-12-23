@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 import chalk from 'chalk';
-import { createConfig, validateConfig } from './config.js';
+import { createConfig, validateConfig } from '../config/index.js';
 import { GrafanaLogCollector } from './grafana-log-collector.js';
-import { StackTraceDecoder } from './trace-decoder-wrapper.js';
+import { StackTraceDecoder } from './decoder-wrapper.js';
 import { ClaudeCodeClient } from './claude-code-client.js';
-import { ProcessedErrorsDB } from './processed-errors-db.js';
-import { SlackNotifier } from './slack-notifier.js';
+import { ProcessedErrorsDB } from '../db/processed-errors-db.js';
+import { SlackNotifier } from '../utils/slack-notifier.js';
 
 /**
  * Sleep 유틸리티
@@ -235,7 +235,7 @@ class AutoFixOrchestrator {
 async function main() {
     try {
         // 설정 로드
-        const config = loadConfig('./auto-fix-config.json');
+        const config = createConfig();
 
         // 실행 모드 선택
         const mode = process.argv[2] || 'once';

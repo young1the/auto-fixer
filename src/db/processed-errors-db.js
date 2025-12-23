@@ -12,7 +12,7 @@ const __dirname = path.dirname(__filename);
  */
 export class ProcessedErrorsDB {
     constructor(dbPath = './processed-errors-db.json') {
-        this.dbPath = path.resolve(__dirname, dbPath);
+        this.dbPath = path.resolve(dbPath);
         this.errors = this.load();
     }
 

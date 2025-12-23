@@ -2,9 +2,10 @@
 import chalk from 'chalk';
 import dotenv from 'dotenv';
 import fs from 'fs';
-import { GrafanaLogCollector } from './grafana-log-collector.js';
-import { StackTraceDecoder } from './trace-decoder-wrapper.js';
-import { ClaudeCodeClient } from './claude-code-client.js';
+import { createConfig } from '../config/index.js';
+import { GrafanaLogCollector } from '../core/grafana-log-collector.js';
+import { StackTraceDecoder } from '../core/decoder-wrapper.js';
+import { ClaudeCodeClient } from '../core/claude-code-client.js';
 
 // 환경 변수 로드
 dotenv.config();
@@ -12,26 +13,6 @@ dotenv.config();
 /**
  * 설정 로드 (환경 변수 치환)
  */
-function loadConfig(configPath) {
-    const configFile = fs.readFileSync(configPath, 'utf8');
-
-    // 환경 변수 치환 (JSON 파싱 전)
-    const replaced = configFile.replace(/\$\{(\w+)\}/g, (match, key) => {
-        const value = process.env[key];
-        if (!value) return match;
-
-        // JSON 문자열 내부이므로 특수 문자를 이스케이프
-        return value
-            .replace(/\\/g, '\\\\')
-            .replace(/"/g, '\\"')
-            .replace(/\n/g, '\\n')
-            .replace(/\r/g, '\\r')
-            .replace(/\t/g, '\\t');
-    });
-
-    return JSON.parse(replaced);
-}
-
 /**
  * 실제 자동 수정 실행
  */
@@ -41,7 +22,7 @@ async function runAutoFix() {
     try {
         // 1. 설정 로드
         console.log(chalk.cyan('1️⃣  설정 로드 중...'));
-        const config = loadConfig('./auto-fix-config.json');
+        const config = createConfig();
         console.log(chalk.green('   ✓ 설정 로드 완료\n'));
 
         // 2. Grafana에서 로그 수집
