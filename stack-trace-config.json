@@ -1,7 +1,0 @@
-{
-  "sourceMapDir": "${SOURCE_MAP_DIR}",
-  "sourceMapPattern": "*.js.map",
-  "contextLines": 5,
-  "ide": "intellij",
-  "debug": false
-}

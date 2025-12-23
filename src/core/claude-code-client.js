@@ -15,7 +15,8 @@ export class ClaudeCodeClient {
     constructor(config) {
         this.config = config;
         this.cliPath = config.claudeCode.cliPath;
-        this.workingDir = path.resolve(__dirname, config.claudeCode.workingDir);
+        // workingDir는 프로젝트 루트 기준 상대 경로로 처리
+        this.workingDir = path.resolve(process.cwd(), config.claudeCode.workingDir);
         this.timeout = config.claudeCode.timeout || 300000; // 5분
         this.maxRetries = config.claudeCode.maxRetries || 3;
     }

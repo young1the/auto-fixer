@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import crypto from 'crypto';
 import chalk from 'chalk';
-import fs from 'fs';
+
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
@@ -287,39 +287,15 @@ export class GrafanaLogCollector {
     }
 }
 
-/**
- * 설정 로드 (환경 변수 치환)
- */
-function loadConfig(configPath) {
-    const configFile = fs.readFileSync(configPath, 'utf8');
-
-    // 환경 변수 치환 (JSON 파싱 전) - 따옴표 이스케이프 포함
-    const replaced = configFile.replace(/\$\{(\w+)\}/g, (match, key) => {
-        const value = process.env[key];
-        if (!value) return match;
-
-        // JSON 문자열 내부이므로 특수 문자를 이스케이프 (백슬래시 먼저, 그 다음 따옴표)
-        return value
-            .replace(/\\/g, '\\\\')
-            .replace(/"/g, '\\"')
-            .replace(/\n/g, '\\n')
-            .replace(/\r/g, '\\r')
-            .replace(/\t/g, '\\t');
-    });
-
-    return JSON.parse(replaced);
-}
 
 // CLI 모드로 실행된 경우
 const __filename = fileURLToPath(import.meta.url);
 if (__filename === process.argv[1]) {
     (async () => {
         try {
-            // .env 파일 로드
-            dotenv.config();
-
-            // 설정 로드
-            const config = loadConfig('./auto-fix-config.json');
+            // 설정 로드 (Dynamic import to avoid circular dependency issues if any, or just strictly path based)
+            const { createConfig } = await import('../config/index.js');
+            const config = createConfig();
 
             // 로그 수집
             const collector = new GrafanaLogCollector(config);

@@ -94,17 +94,12 @@ const StackTraceDecoder = () => {
     const [config, setConfig] = useState(null);
 
     useEffect(() => {
-        // config.json 로드
-        const configPath = path.join(process.cwd(), 'stack-trace-config.json');
-        if (fs.existsSync(configPath)) {
-            const configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-            setConfig(configData);
-        } else {
-            setConfig({
-                sourceMapDir: './dist',
-                sourceMapPattern: '*.js.map',
-            });
-        }
+        // 설정 로드
+        const load = async () => {
+            const { createStackTraceConfig } = await import('../config/index.js');
+            setConfig(createStackTraceConfig());
+        };
+        load();
     }, []);
 
     const processStackTrace = async (stackTrace) => {

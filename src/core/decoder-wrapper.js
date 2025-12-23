@@ -290,28 +290,7 @@ export class StackTraceDecoder {
     }
 }
 
-/**
- * 설정 로드 (환경 변수 치환)
- */
-function loadConfig(configPath) {
-    const configFile = fs.readFileSync(configPath, 'utf8');
 
-    // 환경 변수 치환 (JSON 파싱 전)
-    const replaced = configFile.replace(/\$\{(\w+)\}/g, (match, key) => {
-        const value = process.env[key];
-        if (!value) return match;
-
-        // JSON 문자열 내부이므로 특수 문자를 이스케이프
-        return value
-            .replace(/\\/g, '\\\\')
-            .replace(/"/g, '\\"')
-            .replace(/\n/g, '\\n')
-            .replace(/\r/g, '\\r')
-            .replace(/\t/g, '\\t');
-    });
-
-    return JSON.parse(replaced);
-}
 
 // CLI 모드로 실행된 경우
 const __filename = fileURLToPath(import.meta.url);
@@ -323,7 +302,8 @@ if (__filename === process.argv[1]) {
             dotenv.config();
 
             // 설정 로드
-            const config = await loadConfig('./auto-fix-config.json');
+            const { createConfig } = await import('../config/index.js');
+            const config = createConfig();
 
             // 스택 트레이스 입력
             const stackTrace = process.argv[2] || 'Error: Cannot read properties of undefined (reading \'status\') at ? (https://e4math2sh1-b.aitextbook.co.kr/static/js/useAccessibilityStore-Q8JOaMCl.js:1:448)';

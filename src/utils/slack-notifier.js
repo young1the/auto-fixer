@@ -187,42 +187,15 @@ export class SlackNotifier {
 /**
  * 설정 로드 (환경 변수 치환)
  */
-function loadConfig(configPath) {
-    const configFile = fs.readFileSync(configPath, 'utf8');
 
-    // 환경 변수 치환
-    const replaced = configFile.replace(/"\$\{(\w+)\}"/g, (match, key) => {
-        const value = process.env[key];
-        if (!value) return match;
-
-        // boolean 값 처리
-        if (value === 'true' || value === 'false') {
-            return value;
-        }
-
-        // 숫자 값 처리
-        if (!isNaN(value) && value.trim() !== '') {
-            return value;
-        }
-
-        // 문자열 값 처리 (이스케이프)
-        return '"' + value
-            .replace(/\\/g, '\\\\')
-            .replace(/"/g, '\\"')
-            .replace(/\n/g, '\\n')
-            .replace(/\r/g, '\\r')
-            .replace(/\t/g, '\\t') + '"';
-    });
-
-    return JSON.parse(replaced);
-}
 
 // CLI 모드로 실행된 경우 (테스트용)
 if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/')}`) {
     (async () => {
         try {
             // 설정 로드
-            const config = loadConfig('./auto-fix-config.json');
+            const { createConfig } = await import('../config/index.js');
+            const config = createConfig();
 
             // Slack 알림 테스트
             const notifier = new SlackNotifier(config);

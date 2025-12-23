@@ -10,35 +10,10 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // 설정 로드
-function loadConfig() {
-    const configPath = path.join(process.cwd(), 'stack-trace-config.json');
-    const defaultConfig = {
-        sourceMapDir: './dist',
-        contextLines: 3,
-        ide: 'vscode', // 'vscode', 'intellij', 'webstorm', 'none'
-        debug: false, // 디버그 메시지 출력 여부
-    };
-
-    if (fs.existsSync(configPath)) {
-        const configFile = fs.readFileSync(configPath, 'utf8');
-
-        // 환경 변수 치환
-        const replaced = configFile.replace(/\$\{(\w+)\}/g, (match, key) => {
-            const value = process.env[key];
-            if (!value) return match;
-
-            return value
-                .replace(/\\/g, '\\\\')
-                .replace(/"/g, '\\"')
-                .replace(/\n/g, '\\n')
-                .replace(/\r/g, '\\r')
-                .replace(/\t/g, '\\t');
-        });
-
-        return { ...defaultConfig, ...JSON.parse(replaced) };
-    }
-
-    return defaultConfig;
+// 설정 로드
+async function getStackTraceConfig() {
+    const { createStackTraceConfig } = await import('../config/index.js');
+    return createStackTraceConfig();
 }
 
 // Stack trace 파싱
@@ -517,12 +492,14 @@ async function pipeMode(config) {
 }
 
 // 메인 실행
-const config = loadConfig();
+(async () => {
+    const config = await getStackTraceConfig();
 
-console.log(chalk.dim(`설정: 소스맵 디렉토리=${config.sourceMapDir}, 컨텍스트 줄=${config.contextLines}\n`));
+    console.log(chalk.dim(`설정: 소스맵 디렉토리=${config.sourceMapDir}, 컨텍스트 줄=${config.contextLines}\n`));
 
-if (process.stdin.isTTY) {
-    interactiveMode(config);
-} else {
-    pipeMode(config);
-}
+    if (process.stdin.isTTY) {
+        interactiveMode(config);
+    } else {
+        pipeMode(config);
+    }
+})();
