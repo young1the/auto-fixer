@@ -109,13 +109,23 @@ class AutoFixOrchestrator {
         console.log(chalk.dim('   스택 트레이스 디코딩 중...'));
         const decoded = await this.decoder.decodeStackTrace(error.error.stackTrace);
 
-        if (!decoded) {
-            console.log(chalk.yellow('   ⚠️  스킵: 소스맵을 찾을 수 없음'));
-            this.db.markAsProcessed(errorHash, 'NO_SOURCEMAP', {
+        if (!decoded || decoded.error) {
+            const reason = decoded?.error || 'UNKNOWN_ERROR';
+            const message = decoded?.message || '알 수 없는 오류';
+
+            console.log(chalk.yellow(`   ⚠️  스킵: ${message}`));
+
+            if (reason === 'SOURCE_MAP_NOT_FOUND') {
+                console.log(chalk.dim(`      검색 경로: ${decoded.searchPath || '알 수 없음'}`));
+                console.log(chalk.dim('      팁: vite.config.js에서 sourceMap: true 설정 확인 또는 npm run build 실행 필요'));
+            }
+
+            this.db.markAsProcessed(errorHash, reason, {
                 message: error.error.message,
+                details: message
             });
             this.stats.totalSkipped++;
-            return { success: false, reason: 'NO_SOURCEMAP' };
+            return { success: false, reason: reason };
         }
 
         console.log(chalk.dim(`   ✓ 디코딩 완료: ${decoded.original.file}:${decoded.original.line}`));
