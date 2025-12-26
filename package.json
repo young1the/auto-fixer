@@ -19,6 +19,7 @@
     "test:claude": "node src/core/claude-code-client.js",
     "test:integration": "node tests/integration-test.js",
     "test:slack": "node src/utils/slack-notifier.js",
+    "test:permission": "node tests/test-permission-config.js",
     "auto-fix": "node src/cli/run-auto-fix.js",
     "auto-fix:once": "node src/core/auto-fix-orchestrator.js once",
     "auto-fix:loop": "node src/core/auto-fix-orchestrator.js continuous",

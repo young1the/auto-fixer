@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 import { spawn } from 'child_process';
 import chalk from 'chalk';
 import path from 'path';
@@ -40,11 +40,16 @@ export class ClaudeCodeClient {
             try {
                 const result = await this.runClaudeCode(prompt);
                 console.log(chalk.green('✓ 수정 완료'));
+                if (result.cost) {
+                    console.log(chalk.yellow(`   💰 예상 비용: ${result.cost}`));
+                }
+
                 return {
                     success: true,
                     result: result,
                     prompt: prompt,
                     errorHash: errorInfo.hash,
+                    cost: result.cost,
                 };
             } catch (error) {
                 lastError = error;
@@ -135,12 +140,18 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 
             console.log(chalk.dim('   Claude Code 실행 중...'));
             console.log(chalk.dim(`   작업 디렉토리: ${this.workingDir}`));
+            console.log(chalk.dim(`   권한 모드: ${this.config.claudeCode.permissionMode || 'acceptEdits'}`));
 
             // Claude Code CLI 인자
             const args = [
                 '--print',  // 비대화형 모드
-                '--dangerously-skip-permissions',  // 승인 없이 실행
+                '--permission-mode', this.config.claudeCode.permissionMode || 'acceptEdits',
             ];
+
+            // 허용된 도구 목록 추가 (옵션)
+            if (this.config.claudeCode.allowedTools && this.config.claudeCode.allowedTools.length > 0) {
+                args.push('--allowedTools', this.config.claudeCode.allowedTools.join(','));
+            }
 
             const claude = spawn(this.cliPath, args, {
                 cwd: this.workingDir,
@@ -179,9 +190,14 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
                 clearTimeout(timeoutId);
 
                 if (code === 0) {
+                    // 비용 정보 추출
+                    const costMatch = output.match(/Cost:\s*(\$[\d\.]+)/i);
+                    const cost = costMatch ? costMatch[1] : null;
+
                     resolve({
                         output: output,
                         exitCode: code,
+                        cost: cost,
                     });
                 } else {
                     reject(new Error(`Claude Code exited with code ${code}\n${errorOutput}`));
@@ -213,6 +229,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 }
+
 
 // CLI 모드로 실행된 경우 (테스트용)
 if (import.meta.url === `file://${process.argv[1]}`) {

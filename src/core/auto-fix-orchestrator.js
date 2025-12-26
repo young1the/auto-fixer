@@ -7,12 +7,72 @@ import { ClaudeCodeClient } from './claude-code-client.js';
 import { ProcessedErrorsDB } from '../db/processed-errors-db.js';
 import { SlackNotifier } from '../utils/slack-notifier.js';
 
+import readline from 'readline';
+
 /**
  * Sleep 유틸리티
  */
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+/**
+ * 인터랙티브 대기 (Y/n)
+ */
+function waitWithPrompt(ms) {
+    return new Promise((resolve) => {
+        const remaining = ms / 1000;
+
+        console.log(chalk.yellow(`\n계속 진행하시겠습니까? [Y,n] (${remaining}초 후 자동 진행)`));
+
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout,
+        });
+
+        // 타임아웃 설정
+        const timeoutId = setTimeout(() => {
+            rl.close();
+            console.log(chalk.dim('\n⏳ 시간이 초과되어 자동으로 진행합니다.'));
+            resolve(true);
+        }, ms);
+
+        // 키 입력 처리
+        process.stdin.setRawMode(true);
+        process.stdin.resume();
+
+        const keyHandler = (chunk, key) => {
+            const char = chunk instanceof Buffer ? chunk.toString() : chunk;
+
+            if (char === 'n' || char === 'N') {
+                cleanup();
+                console.log(chalk.red('\n🛑 사용자에 의해 중단되었습니다.'));
+                resolve(false);
+            } else if (char === 'y' || char === 'Y' || char === '\r' || char === '\n') {
+                cleanup();
+                console.log(chalk.green('\n▶️ 진행합니다.'));
+                resolve(true);
+            } else if (key && key.name === 'c' && key.ctrl) {
+                cleanup();
+                console.log(chalk.red('\n🛑 종료합니다.'));
+                process.exit(0);
+            }
+        };
+
+        const cleanup = () => {
+            clearTimeout(timeoutId);
+            process.stdin.removeListener('data', keyHandler);
+            if (process.stdin.setRawMode) {
+                process.stdin.setRawMode(false);
+            }
+            process.stdin.pause();
+            rl.close();
+        };
+
+        process.stdin.on('data', keyHandler);
+    });
+}
+
 
 /**
  * 메인 오케스트레이터
@@ -200,10 +260,12 @@ class AutoFixOrchestrator {
 
             // 다음 실행까지 대기
             const interval = this.config.grafana.queryInterval;
-            console.log(chalk.dim(`\n⏰ ${interval / 1000}초 대기 후 다시 실행...\n`));
-            console.log(chalk.dim('━'.repeat(80) + '\n'));
 
-            await sleep(interval);
+            const shouldContinue = await waitWithPrompt(interval);
+            if (!shouldContinue) {
+                break;
+            }
+
         }
     }
 

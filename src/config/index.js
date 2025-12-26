@@ -31,6 +31,11 @@ export function createConfig() {
             workingDir: process.env.WORKING_DIR || './workspace',
             timeout: parseInt(process.env.CLAUDE_CODE_TIMEOUT) || 300000,
             maxRetries: parseInt(process.env.CLAUDE_CODE_MAX_RETRIES) || 3,
+            // Permission handling
+            permissionMode: process.env.CLAUDE_PERMISSION_MODE || 'acceptEdits',
+            allowedTools: process.env.CLAUDE_ALLOWED_TOOLS
+                ? process.env.CLAUDE_ALLOWED_TOOLS.split(',').map(t => t.trim())
+                : null,
         },
 
         git: {
