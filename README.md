@@ -45,6 +45,14 @@ GRAFANA_DATASOURCE_UID=your_loki_datasource_uid
 # Claude Code 설정 (나중에 사용)
 # Claude Code CLI가 설치되어 있고 로그인되어 있어야 함
 CLAUDE_CODE_PATH=claude
+
+# 권한 처리 모드 (acceptAll, acceptEdits, reject)
+# acceptEdits: 코드 편집만 자동 승인 (권장)
+CLAUDE_PERMISSION_MODE=acceptEdits
+
+# 허용할 도구 목록 (선택사항, 쉼표로 구분)
+# 예: "Bash,Read,Write,Git"
+# CLAUDE_ALLOWED_TOOLS=
 ```
 
 ### 2. 소스맵 디렉토리 확인
