@@ -112,19 +112,7 @@ ${contextLines}
 1. 에러의 근본 원인을 파악하고 수정
 2. 유사한 에러가 다른 곳에서도 발생하지 않도록 방어적 코드 작성
 3. 수정 후 코드가 정상 작동하는지 확인
-4. 변경사항을 커밋하되, 커밋 메시지는 다음 형식을 사용:
-
-fix(auto): ${error.message.split('\n')[0].substring(0, 50)}
-
-${error.type} 에러 수정 (${path.basename(original.file)}:${original.line})
-
-Stack Trace:
-${stackTraceForCommit}
-
-Fixes: ${errorInfo.hash}
-🤖 Generated with Claude Code
-
-Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+4. 중요: 코드를 수정만 하고, 절대 git commit을 수행하지 마세요. 커밋은 외부 시스템이 처리합니다.
 `;
 
         return prompt;
@@ -156,7 +144,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
             const claude = spawn(this.cliPath, args, {
                 cwd: this.workingDir,
                 stdio: ['pipe', 'pipe', 'pipe'],
-                shell: true,
+                // shell: true, // Removed to fix DEP0190: Passing args to a child process with shell option true
             });
 
             const timeoutId = setTimeout(() => {
@@ -200,7 +188,12 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
                         cost: cost,
                     });
                 } else {
-                    reject(new Error(`Claude Code exited with code ${code}\n${errorOutput}`));
+                    console.log('--- Claude Code Stdout ---');
+                    console.log(output);
+                    console.log('--- Claude Code Stderr ---');
+                    console.log(errorOutput);
+                    console.log('--------------------------');
+                    reject(new Error(`Claude Code exited with code ${code}\nStderr: ${errorOutput}\nStdout: ${output}`));
                 }
             });
         });
