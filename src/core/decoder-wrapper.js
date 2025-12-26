@@ -24,7 +24,7 @@ export class StackTraceDecoder {
         const parsed = this.parseStackTrace(stackTrace);
 
         if (parsed.length === 0) {
-            return null;
+            return { error: 'NO_STACK_TRACE_FOUND', message: 'No stack trace entries found' };
         }
 
         // 첫 번째 항목만 처리 (가장 상위 에러)
@@ -39,10 +39,17 @@ export class StackTraceDecoder {
         const sourceMapPath = this.findSourceMapFile(entry.file);
 
         if (!sourceMapPath) {
+            const warningMsg = `소스맵을 찾을 수 없음: ${entry.file}`;
             if (this.debug) {
-                console.log(chalk.yellow(`⚠️  소스맵을 찾을 수 없음: ${entry.file}`));
+                console.log(chalk.yellow(`⚠️  ${warningMsg}`));
+                console.log(chalk.dim(`   검색 경로: ${this.sourceMapDir}`));
             }
-            return null;
+            return {
+                error: 'SOURCE_MAP_NOT_FOUND',
+                message: warningMsg,
+                file: entry.file,
+                searchPath: this.sourceMapDir
+            };
         }
 
         try {
@@ -51,7 +58,11 @@ export class StackTraceDecoder {
 
             if (!original) {
                 consumer.destroy();
-                return null;
+                return {
+                    error: 'MAPPING_FAILED',
+                    message: `소스맵에서 원본 위치를 찾을 수 없음 (${entry.file}:${entry.line}:${entry.column})`,
+                    file: entry.file
+                };
             }
 
             const sourceCode = this.getSourceContext(consumer, original.source, original.line);
@@ -85,7 +96,7 @@ export class StackTraceDecoder {
 
         } catch (error) {
             console.error(chalk.red(`❌ 디코딩 오류: ${error.message}`));
-            return null;
+            return { error: 'DECODING_ERROR', message: error.message };
         }
     }
 
@@ -195,8 +206,10 @@ export class StackTraceDecoder {
             if (/^[a-zA-Z0-9_-]{2,}$/.test(possibleHash)) {
                 const hasUpperAndLower = /[A-Z]/.test(possibleHash) && /[a-z]/.test(possibleHash);
                 const hasDigit = /\d/.test(possibleHash);
+                // 8자 이상이면 대소문자/숫자 혼용 여부와 상관없이 해시로 간주 (Hex 해시 대응)
+                const isLongHash = possibleHash.length >= 8;
 
-                if (hasUpperAndLower || hasDigit) {
+                if (hasUpperAndLower || hasDigit || isLongHash) {
                     return this.extractBaseName(nameWithoutExt.substring(0, lastDashIndex) + '.js');
                 }
             }
@@ -224,6 +237,10 @@ export class StackTraceDecoder {
         // 2. Hash를 제거한 base name으로 fuzzy matching
         const baseName = this.extractBaseName(fileName);
 
+        if (this.debug && baseName !== fileName.replace('.js', '')) {
+            console.log(chalk.dim(`   Fuzzy match attempt: ${fileName} -> Base: ${baseName}`));
+        }
+
         if (!fs.existsSync(this.sourceMapDir)) {
             return null;
         }
@@ -245,6 +262,9 @@ export class StackTraceDecoder {
             // 가장 최신 파일 선택
             if (matchingFiles.length > 0) {
                 matchingFiles.sort((a, b) => b.mtime - a.mtime);
+                if (this.debug) {
+                    console.log(chalk.green(`   ✓ Fuzzy match found: ${matchingFiles[0].path}`));
+                }
                 return matchingFiles[0].path;
             }
         } catch (error) {
