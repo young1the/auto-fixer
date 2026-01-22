@@ -6,6 +6,8 @@ import { StackTraceDecoder } from './decoder-wrapper.js';
 import { ClaudeCodeClient } from './claude-code-client.js';
 import { ProcessedErrorsDB } from '../db/processed-errors-db.js';
 import { SlackNotifier } from '../utils/slack-notifier.js';
+import { GitUtils } from '../utils/git-utils.js';
+import path from 'path';
 
 import readline from 'readline';
 
@@ -86,6 +88,7 @@ class AutoFixOrchestrator {
         this.claudeClient = new ClaudeCodeClient(config);
         this.db = new ProcessedErrorsDB(config.paths.processedErrorsDb);
         this.slackNotifier = new SlackNotifier(config);
+        this.gitUtils = new GitUtils(config);
 
         this.stats = {
             totalRuns: 0,
@@ -147,6 +150,11 @@ class AutoFixOrchestrator {
         }
 
         console.log(chalk.green('   ✓ 수정 완료'));
+
+        // 커밋 수행
+        const fileName = path.basename(decoded.original.file);
+        const commitMsg = `${error.error.message.split('\n')[0].substring(0, 80)} (${fileName}:${decoded.original.line})`;
+        await this.gitUtils.commitChanges(decoded.original.file, commitMsg);
         this.db.markAsProcessed(errorHash, 'FIXED', {
             message: error.error.message,
             file: decoded.original.file,

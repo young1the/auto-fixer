@@ -1,6 +1,6 @@
 # Stack Trace Decoder & AI Auto-Fix
 
-프로덕션 환경의 minified 스택 트레이스를 소스맵을 이용해 디코딩하고, AI를 활용하여 자동으로 버그를 수정하는 도구입니다.
+프로덕션 환경의 minified 스택 트레이스를 소스맵을 이용해 디코딩하고, AI(Claude Code)를 활용하여 자동으로 버그를 수정하는 도구입니다.
 
 ## 기능
 
@@ -15,270 +15,140 @@
 - 에러 통계 및 분석
 
 ### 3. AI 자동 수정
-- Claude Code를 이용한 자동 버그 수정
-- Git 자동 커밋
-- 무한 루프 모니터링
+- **Claude Code**를 이용한 자동 버그 수정
+- 자동 Git 커밋 및 브랜치 관리
+- 에러 처리 상태 추적 (중복 수정 방지)
+- Slack 알림 연동
 
 ## 설치
 
 ```bash
-cd scripts/stack-trace-decoder
 npm install
 ```
 
 ## 설정
 
-### 1. 환경 변수 설정
+### 환경 변수 설정
+
+`.env.example` 파일을 복사하여 `.env` 파일을 생성하고 설정을 수정하세요.
 
 ```bash
 cp .env.example .env
 ```
 
-`.env` 파일을 열어 다음 값들을 설정하세요:
+`.env` 파일 주요 설정:
 
 ```env
-# Grafana 설정
+# Grafana 설정 (필수)
 GRAFANA_URL=https://your-grafana-instance.com
 GRAFANA_API_KEY=your_api_key_here
 GRAFANA_DATASOURCE_UID=your_loki_datasource_uid
+GRAFANA_QUERY_INTERVAL=60000
+GRAFANA_LOG_QUERY='{job="frontend"}'
 
-# Claude Code 설정 (나중에 사용)
-# Claude Code CLI가 설치되어 있고 로그인되어 있어야 함
+# Decoder 설정
+SOURCE_MAP_DIR=./workspace/target/static/js
+DECODER_CONTEXT_LINES=10
+DECODER_IDE=intellij
+
+# Claude Code 설정
 CLAUDE_CODE_PATH=claude
+WORKING_DIR=./workspace
+CLAUDE_PERMISSION_MODE=acceptEdits  # acceptAll, acceptEdits, reject
 
-# 권한 처리 모드 (acceptAll, acceptEdits, reject)
-# acceptEdits: 코드 편집만 자동 승인 (권장)
-CLAUDE_PERMISSION_MODE=acceptEdits
+# Git 설정
+GIT_AUTO_COMMIT=true
+GIT_BRANCH=auto-fix/errors
+GIT_PUSH_TO_REMOTE=false
 
-# 허용할 도구 목록 (선택사항, 쉼표로 구분)
-# 예: "Bash,Read,Write,Git"
-# CLAUDE_ALLOWED_TOOLS=
-```
-
-### 2. 소스맵 디렉토리 확인
-
-`auto-fix-config.json`에서 소스맵 위치를 확인/수정하세요:
-
-```json
-{
-  "decoder": {
-    "sourceMapDir": "./target/static/js"
-  }
-}
+# 기능 플래그
+DRY_RUN=false
+ENABLE_SLACK_NOTIFICATIONS=false
 ```
 
 ## 사용 방법
 
+### AI 자동 수정 (Auto Fix)
+
+**인터랙티브 모드 (권장)**:
+가장 사용하기 쉬운 모드로, 에러 수집부터 수정까지 단계를 확인하며 진행합니다.
+```bash
+npm run auto-fix
+```
+
+**단일 실행 모드 (배치 작업용)**:
+한 번 실행하고 종료합니다.
+```bash
+npm run auto-fix:once
+```
+
+**지속 실행 모드 (데몬용)**:
+계속 실행되면서 주기적으로 에러를 모니터링하고 수정합니다.
+```bash
+npm run auto-fix:loop
+```
+
 ### 스택 트레이스 디코딩
 
-**인터랙티브 모드**:
+**대화형 디코더**:
 ```bash
 npm run decode
 ```
 스택 트레이스를 붙여넣고 Enter를 두 번 누르세요.
 
-**Pipe 모드**:
+**파이프(Pipe) 사용**:
 ```bash
-echo "Error: ... at https://domain.com/static/js/file-abc123.js:1:448" | npm run decode
+echo "Error: ... at https://..." | npm run decode
 ```
 
-**래퍼 사용 (프로그래밍)**:
-```bash
-npm run decode-wrapper "Error: ... at https://domain.com/static/js/file-abc123.js:1:448"
-```
+### 데이터베이스 관리
 
-### Grafana 로그 수집
+처리된 에러 내역을 관리합니다.
 
-**기본 실행**:
-```bash
-npm run collect-logs
-```
+- **통계 확인**: `npm run db:stats`
+- **목록 확인**: `npmqhs run db:list`
+- **정리 (오래된 항목 삭제)**: `npm run db:cleanup`
+- **초기화 (모든 데이터 삭제)**: `npm run db:reset`
 
-**JSON 출력 (파이프 가능)**:
-```bash
-npm run test:collector > errors.json
-```
+### 테스트
 
-**결과 예시**:
-```
-🔍 Grafana 로그 수집 중...
-✓ 5개의 에러 로그 발견
-
-📊 에러 통계:
-   Error: 5개
-
-🔥 최근 에러:
-   1. [10:30:15] Cannot read properties of undefined (reading 'data')
-      파일: UserProfile-8poSmKxV.js
-   2. [10:25:42] Cannot read properties of undefined (reading 'status')
-      파일: authStore-Q8JOaMCl.js
-```
-
-### Claude Code 통합 테스트
-
-**통합 워크플로우 테스트**:
-```bash
-npm run test:integration
-```
-
-이 명령어는 다음을 수행합니다:
-1. Grafana에서 최신 에러 로그 수집
-2. 스택 트레이스를 소스맵으로 디코딩
-3. Claude Code용 프롬프트 생성 (실제 실행 없음)
-
-**결과 예시**:
-```
-🧪 Claude Code 통합 테스트
-
-1️⃣  설정 로드 중...
-   ✓ 설정 로드 완료
-
-2️⃣  Grafana에서 에러 로그 수집 중...
-   ✓ 13개의 에러 수집 완료
-
-3️⃣  스택 트레이스 디코딩 중...
-   ✓ 디코딩 완료
-   원본 파일: src/components/Dashboard.vue:142
-
-4️⃣  Claude Code 통합 테스트
-   💡 생성된 프롬프트 확인
-
-✅ 통합 테스트 완료!
-```
-
-## 프로그래밍 사용법
-
-### Grafana 로그 수집기
-
-```javascript
-import { GrafanaLogCollector } from './grafana-log-collector.js';
-
-const collector = new GrafanaLogCollector(config);
-const errors = await collector.collectErrors();
-
-errors.forEach(error => {
-  console.log(error.hash);           // 에러 해시
-  console.log(error.error.message);  // 에러 메시지
-  console.log(error.error.stackTrace); // 스택 트레이스
-});
-```
-
-### 스택 트레이스 디코더
-
-```javascript
-import { StackTraceDecoder } from './trace-decoder-wrapper.js';
-
-const decoder = new StackTraceDecoder(config);
-const result = await decoder.decodeStackTrace(stackTrace);
-
-if (result) {
-  console.log(result.original.file);     // src/stores/userStore.js
-  console.log(result.original.line);     // 42
-  console.log(result.original.function); // fetchUser
-  console.log(result.sourceCode[5].content); // if (response.data) {
-}
-```
-
-### Claude Code 클라이언트
-
-```javascript
-import { ClaudeCodeClient } from './claude-code-client.js';
-import { StackTraceDecoder } from './trace-decoder-wrapper.js';
-import { GrafanaLogCollector } from './grafana-log-collector.js';
-
-// 1. 에러 수집
-const collector = new GrafanaLogCollector(config);
-const errors = await collector.collectErrors();
-
-// 2. 디코딩
-const decoder = new StackTraceDecoder(config);
-const decoded = await decoder.decodeStackTrace(errors[0].error.stackTrace);
-
-// 3. Claude Code로 수정
-const claudeClient = new ClaudeCodeClient(config);
-const result = await claudeClient.fixError(errors[0], decoded);
-
-if (result.success) {
-  console.log('✓ 수정 완료!');
-  console.log('에러 해시:', result.errorHash);
-}
-```
+- **통합 테스트**: `npm run test:integration`
+- **수집기 테스트**: `npm run test:collector`
+- **Slack 알림 테스트**: `npm run test:slack`
 
 ## 디렉토리 구조
 
 ```
-scripts/stack-trace-decoder/
-├── .env.example                  # 환경 변수 템플릿
-├── .env                          # 환경 변수 (git ignored)
-├── .gitignore                    # Git 제외 파일 목록
-├── auto-fix-config.json          # 설정 파일
-├── decode-trace.js               # 인터랙티브 디코더
-├── grafana-log-collector.js      # Grafana 로그 수집기
-├── trace-decoder-wrapper.js      # 디코더 래퍼 (프로그래밍용)
-├── claude-code-client.js         # Claude Code CLI 클라이언트
-├── auto-fix-orchestrator.js      # 메인 오케스트레이터
-├── slack-notifier.js             # Slack 알림 클라이언트
-├── processed-errors-db.js        # 처리된 에러 DB
-├── integration-test.js           # 통합 테스트
-├── .auto-fix-data/               # 자동 생성 데이터 (git ignored)
-│   ├── processed-errors-db.json  # 처리된 에러 데이터베이스
-│   ├── metrics.json              # 메트릭 데이터
-│   └── logs/                     # 로그 파일
-├── task.md                       # AI 자동화 구현 계획
+auto-fixer/
+├── src/
+│   ├── cli/              # CLI 진입점 (run-auto-fix.js, decode-trace.js)
+│   ├── config/           # 설정 관리 (환경 변수 로드)
+│   ├── core/             # 핵심 로직 (Orchestrator, Collector, Decoder, Claude Client)
+│   ├── db/               # JSON 기반 간이 DB (처리된 에러 추적)
+│   └── utils/            # 유틸리티 (Slack Notifier 등)
+├── tests/                # 테스트 코드
+├── .auto-fix-data/       # (자동 생성) 런타임 데이터, 로그, DB 파일 저장소
+├── task.md               # 구현 계획 및 상태
 ├── package.json
 └── README.md
 ```
 
-## 다음 단계
-
-현재 구현된 것:
-- ✅ 스택 트레이스 디코더
-- ✅ Grafana 로그 수집기
-- ✅ 스택 트레이스 디코더 래퍼
-- ✅ Claude Code 통합
-- ✅ Git 자동 커밋 (스택 트레이스 포함)
-- ✅ 메인 오케스트레이터 (once/continuous 모드)
-- ✅ Slack 알림
-- ✅ 처리된 에러 DB
-
-구현 예정:
-- ⏳ 모니터링 대시보드
-- ⏳ 웹 UI
-
-자세한 구현 계획은 `task.md`를 참고하세요.
-
 ## 트러블슈팅
 
 ### 소스맵을 찾을 수 없음
-
-1. `auto-fix-config.json`에서 `sourceMapDir` 경로 확인
-2. 빌드 디렉토리에 `.js.map` 파일이 있는지 확인
-3. Vite 설정에서 소스맵 생성 활성화:
-   ```javascript
-   // vite.config.js
-   export default {
-     build: {
-       sourcemap: true
-     }
-   }
-   ```
+1. `.env` 파일의 `SOURCE_MAP_DIR` 경로가 올바른지 확인하세요.
+2. 해당 경로에 `.js.map` 파일들이 실제로 존재하는지 확인하세요.
 
 ### Grafana API 연결 실패
+1. `GRAFANA_URL`이 올바른지 확인하세요.
+2. `GRAFANA_API_KEY`에 충분한 권한이 있는지 확인하세요.
+3. `GRAFANA_DATASOURCE_UID`가 올바른지 확인하세요 (Loki 데이터소스).
 
-1. `.env`에서 `GRAFANA_URL` 확인
-2. API 키 권한 확인 (Viewer 이상 필요)
-3. Datasource UID 확인:
-   ```bash
-   curl -H "Authorization: Bearer YOUR_API_KEY" \
-     https://your-grafana.com/api/datasources
-   ```
-
-### 해시 불일치로 소스맵 매칭 실패
-
-- Fuzzy matching이 자동으로 처리하지만, 파일명이 완전히 다른 경우 실패할 수 있습니다
-- 프로덕션 빌드와 동일한 소스맵을 사용하세요
-- 또는 프로덕션 환경에서 소스맵을 다운로드하여 사용하세요
+### Claude Code 실행 오류
+1. `claude` CLI가 시스템에 설치되어 있고 로그인되어 있는지 확인하세요 (`claude login`).
+2. `WORKING_DIR`이 실제 존재하는 프로젝트 경로인지 확인하세요.
 
 ## 라이선스
 
 MIT License
+
