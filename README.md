@@ -4,6 +4,10 @@
 
 ## 기능
 
+| start | end |
+|---|---|
+| <video src="https://github.com/user-attachments/assets/5886210f-2d61-43dd-88c9-9fee8b981dad" controls width="300"></video> | <video src="https://github.com/user-attachments/assets/7f94b332-65ee-4773-8b62-59bc3dee43c0" controls width="300"></video> |
+
 ### 1. 스택 트레이스 디코딩
 - Minified JavaScript 에러를 원본 소스 코드 위치로 변환
 - Vite 빌드 해시 불일치 자동 처리 (Fuzzy matching)
